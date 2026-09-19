@@ -751,6 +751,42 @@ GameController::OpResult GameController::SetFreezeTime(bool on) {
     return OpResult::Applied;
 }
 
+// Enviro считает длину суток от cycleLengthInMinutes: чем больше, тем медленнее
+// идут часы. В отличие от simulate = false часы всё-таки идут, а это важно -
+// распорядок дня NPC двигается по смене часа, см. NPC.Update.
+GameController::OpResult GameController::SetSlowTime(bool on) {
+    MonoObject* settings = TimeSettings();
+    if (!settings) {
+        if (slowActive_) {
+            slowActive_ = false;
+            slowOriginalCaptured_ = false;
+        }
+        Error(L"Система игрового времени ещё недоступна");
+        return OpResult::Waiting;
+    }
+
+    if (on) {
+        if (!slowOriginalCaptured_) {
+            if (!GetFloat(settings, "cycleLengthInMinutes", slowOriginalCycle_) ||
+                slowOriginalCycle_ <= 0.0f) {
+                return OpResult::Unsupported;
+            }
+            slowOriginalCaptured_ = true;
+        }
+        if (!SetFloat(settings, "cycleLengthInMinutes", slowOriginalCycle_ * kSlowTimeFactor)) {
+            return OpResult::Unsupported;
+        }
+        slowActive_ = true;
+    } else if (slowActive_) {
+        if (slowOriginalCaptured_) SetFloat(settings, "cycleLengthInMinutes", slowOriginalCycle_);
+        slowOriginalCaptured_ = false;
+        slowActive_ = false;
+    }
+
+    lastError_.clear();
+    return OpResult::Applied;
+}
+
 GameController::OpResult GameController::SetIgnorePolice(bool on) {
     const bool haveHooks = patcher_.ResolvedByPrefix("police.") > 0;
     if (!haveHooks && !npcBlindFieldPresent_) {
@@ -876,6 +912,13 @@ GameController::OpResult GameController::SetUnbreakableItems(bool on) {
 }
 
 GameController::OpResult GameController::SetSilentSteps(bool on) {
+    // Если мы её и не включали, то и выключать нечего. Иначе раз в секунду
+    // затирали бы флаг, который игра могла поставить сама (бонусы, способности).
+    if (!on && !silentActive_) {
+        lastError_.clear();
+        return OpResult::Applied;
+    }
+
     MonoObject* player = LocalPlayer();
     if (!player) {
         silentActive_ = false;
@@ -947,6 +990,7 @@ void GameController::RestoreAll() {
     patcher_.RestoreAll();
 
     SetFreezeTime(false);
+    SetSlowTime(false);
 
     if (silentActive_) {
         MonoObject* player = LocalPlayer();

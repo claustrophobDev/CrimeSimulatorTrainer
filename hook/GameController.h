@@ -12,6 +12,9 @@
 // показывает криво в инвентаре, поэтому не наглеем.
 inline constexpr int kAmmoTopUp = 999;
 
+// Во сколько раз растягиваем игровые сутки в режиме замедления.
+inline constexpr float kSlowTimeFactor = 8.0f;
+
 class GameController final {
 public:
     enum class OpResult {
@@ -32,6 +35,7 @@ public:
 
     // Всё ниже - только с главного потока Unity.
     OpResult SetFreezeTime(bool on);
+    OpResult SetSlowTime(bool on);
     OpResult SetIgnorePolice(bool on);
     OpResult SetIgnoreCivilians(bool on);
     OpResult SetIgnoreCameras(bool on);
@@ -165,6 +169,10 @@ private:
     bool freezeActive_{};
     bool freezeOriginalCaptured_{};
     bool freezeOriginal_ = true;
+
+    bool slowActive_{};
+    bool slowOriginalCaptured_{};
+    float slowOriginalCycle_ = 10.0f;
 
     bool policeActive_{};
     bool civilianActive_{};

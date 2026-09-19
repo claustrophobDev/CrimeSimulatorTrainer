@@ -40,6 +40,7 @@ ULONGLONG g_nextFreezeTick = 0;
 volatile LONG g_tickPending = FALSE;
 
 bool g_prevFreeze = false;
+bool g_prevSlow = false;
 bool g_prevPolice = false;
 bool g_prevCivilians = false;
 bool g_prevCameras = false;
@@ -90,7 +91,7 @@ std::array<FeatureState*, crime_trainer::kFeatureSlots> AllFeatures(SharedState*
     return { &state->freezeTime,       &state->ignorePolice,    &state->ignoreCivilians,
              &state->ignoreCameras,    &state->ignoreSensors,   &state->infiniteAmmo,
              &state->unbreakableItems, &state->silentSteps,     &state->infiniteStamina,
-             &state->noDamage };
+             &state->noDamage,         &state->slowTime };
 }
 
 void ClearRequests(SharedState* state) {
@@ -221,6 +222,7 @@ void ResetTickState() {
     g_nextClockTick = 0;
     g_nextFreezeTick = 0;
     g_prevFreeze = false;
+    g_prevSlow = false;
     g_prevPolice = false;
     g_prevCivilians = false;
     g_prevCameras = false;
@@ -263,9 +265,12 @@ void MainThreadTick() {
     const ULONGLONG now = GetTickCount64();
 
     const bool freeze = Requested(state->freezeTime);
-    if (freeze != g_prevFreeze || now >= g_nextFreezeTick) {
+    const bool slow = Requested(state->slowTime);
+    if (freeze != g_prevFreeze || slow != g_prevSlow || now >= g_nextFreezeTick) {
         Publish(state->freezeTime, freeze, g_controller->SetFreezeTime(freeze));
+        Publish(state->slowTime, slow, g_controller->SetSlowTime(slow));
         g_prevFreeze = freeze;
+        g_prevSlow = slow;
         g_nextFreezeTick = now + 250;
     }
 
@@ -273,28 +278,26 @@ void MainThreadTick() {
     const bool civilians = Requested(state->ignoreCivilians);
     const bool cameras = Requested(state->ignoreCameras);
     const bool sensors = Requested(state->ignoreSensors);
+    // blockAllNoise ставится на объект игрока, а не глобально, поэтому его мало
+    // выставить один раз: после перезагрузки мира игрок будет новый. Обновляем
+    // вместе с остальным редким тиком.
+    const bool silent = Requested(state->silentSteps);
     const bool aiChanged = police != g_prevPolice || civilians != g_prevCivilians ||
-        cameras != g_prevCameras || sensors != g_prevSensors;
+        cameras != g_prevCameras || sensors != g_prevSensors || silent != g_prevSilent;
 
     if (aiChanged || now >= g_nextAiTick) {
         Publish(state->ignorePolice, police, g_controller->SetIgnorePolice(police));
         Publish(state->ignoreCivilians, civilians, g_controller->SetIgnoreCivilians(civilians));
         Publish(state->ignoreCameras, cameras, g_controller->SetIgnoreCameras(cameras));
         Publish(state->ignoreSensors, sensors, g_controller->SetIgnoreSensors(sensors));
+        Publish(state->silentSteps, silent, g_controller->SetSilentSteps(silent));
 
         g_prevPolice = police;
         g_prevCivilians = civilians;
         g_prevCameras = cameras;
         g_prevSensors = sensors;
-        g_nextAiTick = now + 1000;
-    }
-
-    // blockAllNoise достаточно выставить один раз - дальше игра сама держит
-    // noiseRange в нуле, поэтому он в редком тике, а не в частом.
-    const bool silent = Requested(state->silentSteps);
-    if (silent != g_prevSilent || now >= g_nextAiTick) {
-        Publish(state->silentSteps, silent, g_controller->SetSilentSteps(silent));
         g_prevSilent = silent;
+        g_nextAiTick = now + 1000;
     }
 
     const bool ammo = Requested(state->infiniteAmmo);

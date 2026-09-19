@@ -56,9 +56,12 @@ bool IsModuleLoaded(DWORD pid, const wchar_t* moduleName) {
 
 FeatureState SharedState::* FeatureMember(int index) {
     static constexpr std::array<FeatureState SharedState::*, kFeatureSlots> kMembers{
-        &SharedState::freezeTime,   &SharedState::ignorePolice, &SharedState::ignoreCivilians,
-        &SharedState::ignoreCameras, &SharedState::ignoreSensors, &SharedState::infiniteAmmo,
-        &SharedState::unbreakableItems,
+        &SharedState::freezeTime,       &SharedState::ignorePolice,
+        &SharedState::ignoreCivilians,  &SharedState::ignoreCameras,
+        &SharedState::ignoreSensors,    &SharedState::infiniteAmmo,
+        &SharedState::unbreakableItems, &SharedState::silentSteps,
+        &SharedState::infiniteStamina,  &SharedState::noDamage,
+        &SharedState::slowTime,
     };
     if (index < 0 || index >= static_cast<int>(kMembers.size())) return nullptr;
     return kMembers[static_cast<std::size_t>(index)];

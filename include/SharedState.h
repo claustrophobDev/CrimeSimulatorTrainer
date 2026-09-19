@@ -12,12 +12,12 @@
 namespace crime_trainer {
 
 inline constexpr std::uint32_t kSharedMagic = 0x4354524Eu; // 'CTRN'
-inline constexpr std::uint32_t kSharedVersion = 8;
+inline constexpr std::uint32_t kSharedVersion = 9;
 
 inline constexpr wchar_t kGameProcessName[] = L"Crime Simulator.exe";
 inline constexpr wchar_t kHookDllName[] = L"CrimeTrainerHook.dll";
 
-inline constexpr int kFeatureSlots = 10;
+inline constexpr int kFeatureSlots = 11;
 
 // Если одна сторона не обновляла свой тик дольше этого - считаем её мёртвой.
 inline constexpr DWORD kHeartbeatTimeoutMs = 4000;
@@ -55,6 +55,7 @@ struct SharedState final {
     FeatureState silentSteps;
     FeatureState infiniteStamina;
     FeatureState noDamage;
+    FeatureState slowTime;
 
     volatile LONG hour;
     volatile LONG minute;
@@ -72,11 +73,12 @@ struct SharedState final {
 static_assert(sizeof(FeatureState) == 12);
 static_assert(offsetof(SharedState, freezeTime) == 24);
 static_assert(offsetof(SharedState, noDamage) == 132);
-static_assert(offsetof(SharedState, status) == 164);
-static_assert(sizeof(SharedState) == 548);
+static_assert(offsetof(SharedState, slowTime) == 144);
+static_assert(offsetof(SharedState, status) == 176);
+static_assert(sizeof(SharedState) == 560);
 
 inline std::wstring MappingName(DWORD pid) {
-    return L"Local\\CrimeTrainer_v8_" + std::to_wstring(pid);
+    return L"Local\\CrimeTrainer_v9_" + std::to_wstring(pid);
 }
 
 // GetTickCount переполняется примерно раз в 49 дней. Вычитание в беззнаковом

@@ -113,6 +113,16 @@ ilspycmd -o out -t NPC "D:\...\Crime Simulator_Data\Managed\Assembly-CSharp.dll"
 `ExclamationSensor`, `AttackSensor`, `SightSensor`, `DroneSensor`, если такие
 классы вообще есть в сборке.
 
+## Время
+
+`enviro.Time.Settings` (класс `EnviroTime` из Enviro3.Runtime):
+
+- `simulate` — остановка часов. Побочка: `NPC.Update` переключает распорядок дня
+  по `prevHour != Time.hours`, так что со стоящими часами NPC навсегда остаются
+  в том занятии, в котором их застали
+- `cycleLengthInMinutes` — длина полных суток в реальных минутах, по умолчанию 10.
+  Замедление умножает её на 8: часы идут, распорядок работает
+
 ## Игрок
 
 - `blockAllNoise` — `[Networked]`, через сеттер. Игра сама каждый кадр обнуляет
